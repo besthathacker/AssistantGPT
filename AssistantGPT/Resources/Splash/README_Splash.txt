@@ -1,0 +1,1 @@
+This folder contains the Launch Screen splash image(s). Replace these with your LaunchImage.png.
