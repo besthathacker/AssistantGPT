@@ -1,39 +1,39 @@
-name: iOS IPA Build & Sign
+name: iOS Build & Sign (Files in Repo)
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Decode and Install Certificates
+      - name: Install Certificates and Profile
         run: |
-          echo "$CERT_P12_BASE64" | base64 --decode > cert.p12
-          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+          PASSWORD="your_password_here"
           security create-keychain -p "" build.keychain
-          security import cert.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
-          security list-keychains -s ~/Library/Keychains/build.keychain
-          security default-keychain -s ~/Library/Keychains/build.keychain
+          security import signing/cert.p12 -k ~/Library/Keychains/build.keychain -P "$PASSWORD" -T /usr/bin/codesign
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Install Dependencies
         run: |
           gem install cocoapods
           pod install || true
 
-      - name: Build and Archive
+      - name: Build & Archive
         run: |
           xcodebuild clean archive \
             -workspace AssistantGPT.xcworkspace \
             -scheme AssistantGPT \
             -configuration Release \
             -archivePath $PWD/build/AssistantGPT.xcarchive \
-            CODE_SIGN_IDENTITY="Apple Distribution: Your Name (TEAMID)" \
             PROVISIONING_PROFILE_SPECIFIER="YourProfileName"
 
       - name: Export IPA
