@@ -16,11 +16,11 @@ jobs:
 
       - name: Install Certificates and Profile
         run: |
-          PASSWORD="your_password_here"
+          PASSWORD="czkeji"
           security create-keychain -p "" build.keychain
-          security import signing/cert.p12 -k ~/Library/Keychains/build.keychain -P "$PASSWORD" -T /usr/bin/codesign
+          security import cert.p12 -k ~/Library/Keychains/build.keychain -P "$PASSWORD" -T /usr/bin/codesign
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Install Dependencies
         run: |
@@ -34,7 +34,7 @@ jobs:
             -scheme AssistantGPT \
             -configuration Release \
             -archivePath $PWD/build/AssistantGPT.xcarchive \
-            PROVISIONING_PROFILE_SPECIFIER="YourProfileName"
+            PROVISIONING_PROFILE_SPECIFIER="com.huaneng.lms2"
 
       - name: Export IPA
         run: |
