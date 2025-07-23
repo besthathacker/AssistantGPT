@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AssistantGPT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers/dist/transformers.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #1e1e2f;
+      --text-color: #fff;
+      --section-bg: #2c2c3a;
+      --chat-bg: #2c2c3a;
+      --chat-assistant: #00d4ff;
+      --chat-user: #00ff88;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-color: #f5f5f5;
+        --text-color: #000;
+        --section-bg: #ffffff;
+        --chat-bg: #e0e0e0;
+        --chat-assistant: #0055cc;
+        --chat-user: #008800;
+      }
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    #app { max-width: 900px; margin: 0 auto; padding: 20px; flex: 1; }
+    h1 { text-align: center; color: var(--chat-assistant); font-size: 2.5em; }
+    textarea { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; }
+    button { padding: 10px 15px; border: none; background: #4CAF50; color: white; border-radius: 5px; cursor: pointer; margin: 5px 0; }
+    button:hover { background: #45a049; }
+    #chat { background: var(--chat-bg); padding: 15px; border-radius: 10px; min-height: 300px; overflow-y: auto; }
+    .message { margin-bottom: 15px; }
+    .user { color: var(--chat-user); }
+    .assistant { color: var(--chat-assistant); }
+    #tasks { background: var(--section-bg); padding: 10px; margin-top: 10px; border-radius: 5px; }
+    #settings { background: var(--section-bg); padding: 10px; margin-top: 10px; border-radius: 5px; }
+    footer { text-align: center; padding: 15px; background: var(--section-bg); font-size: 14px; color: #bbb; border-top: 1px solid #333; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>AssistantGPT</h1>
+    <div id="chat"></div>
+    <textarea id="userInput" rows="2" placeholder="Ask me (e.g., 'Search latest iOS', 'Tell me a joke', 'Add task buy milk')"></textarea>
+    <button onclick="handleCommand()">Send</button>
+    <button onclick="clearChat()">Clear Chat</button>
+    <div id="tasks"></div>
+
+    <div id="settings">
+      <h3>Settings</h3>
+      <button onclick="clearAllData()">Clear All Data</button>
+      <button onclick="resetTasks()">Reset Tasks</button>
+      <button onclick="toggleTheme()">Toggle Dark/Light Mode</button>
+    </div>
+  </div>
+  <footer>
+    Made With ❤️ by Aiden
+  </footer>
+
+  <script>
+    let pipeline;
+    let tasks = [];
+    let chatHistory = [];
+    let manualTheme = null;
+
+    async function loadModel() {
+      pipeline = await window.transformers.pipeline('text-generation', 'Xenova/gpt2');
+      loadChatHistory();
+      loadTasks();
+      addMessage("assistant", "AssistantGPT Ready!");
+    }
+    loadModel();
+
+    function saveChatHistory() {
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    }
+
+    function loadChatHistory() {
+      const saved = localStorage.getItem('chatHistory');
+      if (saved) {
+        chatHistory = JSON.parse(saved);
+        chatHistory.forEach(msg => {
+          addMessage(msg.sender, msg.text, false);
+        });
+      }
+    }
+
+    function addMessage(sender, text, save = true) {
+      const chatDiv = document.getElementById('chat');
+      chatDiv.innerHTML += `<div class="message"><strong class="${sender}">${sender === 'user' ? 'You' : 'AssistantGPT'}:</strong> ${text}</div>`;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+      if (save) {
+        chatHistory.push({ sender, text });
+        saveChatHistory();
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function loadTasks() {
+      const savedTasks = localStorage.getItem('tasks');
+      if (savedTasks) {
+        tasks = JSON.parse(savedTasks);
+        renderTasks();
+      }
+    }
+
+    async function askGPT2(prompt) {
+      const response = await pipeline(prompt, { max_new_tokens: 80 });
+      return response[0].generated_text;
+    }
+
+    async function handleCommand() {
+      const input = document.getElementById('userInput').value.trim();
+      if (!input) return;
+      addMessage('user', input);
+      document.getElementById('userInput').value = '';
+
+      const lowerInput = input.toLowerCase();
+
+      // Command triggers
+      if (lowerInput.includes('joke')) {
+        const joke = await askGPT2("Tell me a funny and short joke:");
+        addMessage('assistant', joke);
+        return;
+      }
+      if (lowerInput.includes('fact') || lowerInput.includes('trivia')) {
+        const fact = await askGPT2("Give me an interesting trivia fact about: " + input);
+        addMessage('assistant', fact);
+        return;
+      }
+      if (lowerInput.startsWith('add task')) {
+        const task = input.replace(/add task/i, '').trim();
+        if (task) {
+          tasks.push(task);
+          saveTasks();
+          renderTasks();
+          addMessage('assistant', `Task added: "${task}"`);
+        } else {
+          addMessage('assistant', "Please provide a task description.");
+        }
+        return;
+      }
+
+      const searchTriggers = ['search', 'how', 'latest', 'who', 'what', 'where', 'when', 'news', 'find'];
+      if (searchTriggers.some(trigger => lowerInput.startsWith(trigger) || lowerInput.includes(` ${trigger} `))) {
+        await handleWebSearch(input);
+        return;
+      }
+
+      // Default to AI response
+      const answer = await askGPT2(input);
+      addMessage('assistant', answer);
+    }
+
+    async function handleWebSearch(query) {
+      addMessage('assistant', "Searching the web...");
+      const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&pretty=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      let abstract = data.AbstractText || "No direct answer found. Related topics include:";
+      if (data.RelatedTopics.length) {
+        abstract += "\n\n" + data.RelatedTopics.slice(0, 3).map(t => `• ${t.Text}`).join("\n");
+      }
+      const summary = await askGPT2("Summarize this info: " + abstract);
+      addMessage('assistant', summary);
+    }
+
+    function renderTasks() {
+      const taskDiv = document.getElementById('tasks');
+      taskDiv.innerHTML = "<h3>Your Tasks:</h3>";
+      tasks.forEach((t, i) => {
+        taskDiv.innerHTML += `<div>${i + 1}. ${t}</div>`;
+      });
+    }
+
+    function clearChat() {
+      chatHistory = [];
+      saveChatHistory();
+      document.getElementById('chat').innerHTML = '';
+      addMessage('assistant', "Chat cleared.");
+    }
+
+    function clearAllData() {
+      chatHistory = [];
+      tasks = [];
+      localStorage.clear();
+      document.getElementById('chat').innerHTML = '';
+      document.getElementById('tasks').innerHTML = '';
+      addMessage('assistant', "All data cleared.");
+    }
+
+    function resetTasks() {
+      tasks = [];
+      saveTasks();
+      renderTasks();
+      addMessage('assistant', "Tasks reset.");
+    }
+
+    function toggleTheme() {
+      if (manualTheme === 'dark') {
+        document.body.classList.remove('dark');
+        manualTheme = 'light';
+        document.body.style.background = '#f5f5f5';
+        document.body.style.color = '#000';
+      } else {
+        document.body.classList.add('dark');
+        manualTheme = 'dark';
+        document.body.style.background = '#1e1e2f';
+        document.body.style.color = '#fff';
+      }
+    }
+  </script>
+</body>
+</html>
