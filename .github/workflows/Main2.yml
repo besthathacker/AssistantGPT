@@ -105,8 +105,11 @@ jobs:
           security import cert.p12 -k ~/Library/Keychains/build.keychain -P "$PASSWORD" -T /usr/bin/codesign
           security default-keychain -s ~/Library/Keychains/build.keychain
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profile
-
-      - name: Build and Archive
+          if [ -f signing/profile.mobileprovision ]; then
+            cp signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          fi
+          
+      - name: hi
         run: |
           xcodebuild clean archive \
             -project AssistantGPT.xcodeproj \
