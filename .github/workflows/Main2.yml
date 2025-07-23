@@ -1,4 +1,4 @@
-name: iOS Build & Sign (p12 in repo)
+name: iOS Dynamic Build (Auto Project Creation)
 
 on:
   workflow_dispatch:
@@ -11,18 +11,105 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Create Project Spec
+        run: |
+          cat > Project.yml << 'EOF'
+          name: AssistantGPT
+          options:
+            bundleIdPrefix: com.aiden
+            deploymentTarget:
+              iOS: '15.0'
+          targets:
+            AssistantGPT:
+              type: application
+              platform: iOS
+              sources: [Sources]
+              resources: [Resources]
+              settings:
+                INFO_PLIST_FILE: Sources/Info.plist
+          EOF
+
+      - name: Create Sources and Resources
+        run: |
+          mkdir -p Sources Resources
+          # Create Info.plist
+          cat > Sources/Info.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key>
+            <string>AssistantGPT</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.aiden.AssistantGPT</string>
+            <key>CFBundleExecutable</key>
+            <string>$(EXECUTABLE_NAME)</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+          </dict>
+          </plist>
+          PLIST
+
+          # Create App.swift
+          cat > Sources/App.swift << 'SWIFT'
+          import SwiftUI
+
+          @main
+          struct AssistantGPTApp: App {
+              var body: some Scene {
+                  WindowGroup {
+                      ContentView()
+                  }
+              }
+          }
+          SWIFT
+
+          # Create ContentView.swift
+          cat > Sources/ContentView.swift << 'SWIFT'
+          import SwiftUI
+          import WebKit
+
+          struct WebView: UIViewRepresentable {
+              func makeUIView(context: Context) -> WKWebView {
+                  let webView = WKWebView()
+                  if let path = Bundle.main.path(forResource: "index", ofType: "html") {
+                      webView.loadFileURL(URL(fileURLWithPath: path), allowingReadAccessTo: URL(fileURLWithPath: path))
+                  }
+                  return webView
+              }
+              func updateUIView(_ uiView: WKWebView, context: Context) {}
+          }
+
+          struct ContentView: View {
+              var body: some View {
+                  WebView().edgesIgnoringSafeArea(.all)
+              }
+          }
+          SWIFT
+
+          # Copy your HTML
+          cp index.html Resources/index.html
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+        
       - name: Install Certificate
         run: |
           PASSWORD="czkeji"
           security create-keychain -p "" build.keychain
           security import cert.p12 -k ~/Library/Keychains/build.keychain -P "$PASSWORD" -T /usr/bin/codesign
           security default-keychain -s ~/Library/Keychains/build.keychain
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profile
+
       - name: Build and Archive
         run: |
           xcodebuild clean archive \
-            -workspace AssistantGPT.xcworkspace \
+            -project AssistantGPT.xcodeproj \
             -scheme AssistantGPT \
             -configuration Release \
             -archivePath $PWD/build/AssistantGPT.xcarchive \
