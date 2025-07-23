@@ -1,0 +1,51 @@
+name: Unzip and Commit Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_file:
+        description: 'Name of the ZIP file to unzip (must be in the repo root)'
+        required: true
+        default: 'AssistantGPT_Full_With_Xcode_Signing.zip'
+
+permissions:
+  contents: write  # Required to push changes back to the repository
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false  # Use PAT (Personal Access Token) instead of GITHUB_TOKEN
+
+      - name: Set up Git for pushing
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install unzip
+        run: sudo apt-get install -y unzip rsync
+
+      - name: Unzip Project
+        run: |
+          unzip -o "${{ github.event.inputs.zip_file }}" -d ./unzipped
+          echo "Unzipped project to ./unzipped"
+
+      - name: Move unzipped contents to repo root
+        run: |
+          rsync -a ./unzipped/ ./
+          rm -rf ./unzipped
+          rm -f "${{ github.event.inputs.zip_file }}"  # optional: remove ZIP
+
+      - name: Commit changes
+        run: |
+          git add .
+          git commit -m "Unzipped and added project contents" || echo "No changes to commit"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
