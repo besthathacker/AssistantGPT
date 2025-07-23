@@ -1,0 +1,1 @@
+This folder contains the iOS App Icons (AppIcon set). Replace these with your real AppIcon images.
