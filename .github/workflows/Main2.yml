@@ -108,6 +108,25 @@ jobs:
           if [ -f signing/profile.mobileprovision ]; then
             cp signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           fi
+      
+      - name: Create ExportOptions.plist
+        run: |
+           cat > ExportOptions.plist << 'PLIST'
+           <?xml version="1.0" encoding="UTF-8"?>
+           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+           <plist version="1.0">
+           <dict>
+               <key>method</key>
+               <string>development</string>
+               <key>signingStyle</key>
+               <string>manual</string>
+               <key>stripSwiftSymbols</key>
+               <true/>
+               <key>compileBitcode</key>
+               <false/>
+           </dict>
+           </plist>
+           PLIST
           
       - name: hi
         run: |
