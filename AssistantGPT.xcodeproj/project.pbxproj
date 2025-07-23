@@ -1,1 +1,9 @@
-// Xcode project placeholder
+// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  classes = {};
+  objectVersion = 55;
+  objects = {
+  };
+  rootObject = 000000000000000000000000;
+}

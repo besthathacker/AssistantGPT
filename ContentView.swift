@@ -6,9 +6,9 @@ struct WebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
-        if let filePath = Bundle.main.path(forResource: "Resources/" + htmlFile, ofType: "html") {
-            let url = URL(fileURLWithPath: filePath)
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        if let filePath = Bundle.main.path(forResource: htmlFile, ofType: "html") {
+            let fileURL = URL(fileURLWithPath: filePath)
+            webView.loadFileURL(fileURL, allowingReadAccessTo: fileURL.deletingLastPathComponent())
         }
         return webView
     }
