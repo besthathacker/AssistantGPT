@@ -116,7 +116,7 @@ jobs:
             -scheme AssistantGPT \
             -configuration Release \
             -archivePath $PWD/build/AssistantGPT.xcarchive \
-            CODE_SIGN_STYLE=Manual
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Export IPA
         run: |
