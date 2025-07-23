@@ -27,14 +27,16 @@ jobs:
           gem install cocoapods
           pod install || true
 
+      - name: cd to directory
+        run: cd Archive
+        
       - name: Build & Archive
         run: |
           xcodebuild clean archive \
             -workspace AssistantGPT.xcworkspace \
             -scheme AssistantGPT \
             -configuration Release \
-            -archivePath $PWD/build/AssistantGPT.xcarchive \
-            PROVISIONING_PROFILE_SPECIFIER="com.huaneng.lms2"
+            -archivePath $PWD/build/AssistantGPT.xcarchive
 
       - name: Export IPA
         run: |
